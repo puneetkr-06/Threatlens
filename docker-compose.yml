@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: waf_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+
+  upstream:
+    build:
+      context: .
+      dockerfile: Dockerfile.upstream
+    container_name: waf_upstream
+    ports:
+      - "9000:9000"
+    restart: unless-stopped
+
+  waf:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: semantic_waf
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      - REDIS_HOST=redis
+      - UPSTREAM_URL=http://upstream:9000
+    depends_on:
+      - redis
+      - upstream
+    restart: unless-stopped
